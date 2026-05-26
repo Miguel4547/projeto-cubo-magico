@@ -17,16 +17,14 @@ Conforme as diretrizes e os requisitos mínimos exigidos para o projeto, foram d
 
 ---
 
-## 3. Metodologia de Desenvolvimento e Uso de Inteligência Artificial
+## 3. Declaração do Uso de Inteligência Artificial (Conforme Instruções)
 
-No início do desenvolvimento, utilizamos a Inteligência Artificial (ChatGPT) para auxiliar na criação da estrutura base do cenário tridimensional, geração do loop de renderização e posicionamento inicial dos 27 blocos no espaço cartesiano ($X, Y, Z$). 
+Em conformidade com as diretrizes da disciplina apresentadas em sala, declaramos que ferramentas de Inteligência Artificial (Generativa) foram utilizadas estritamente como assistentes de co-pilotagem no início do projeto.
 
-### Registro do Processo de Desenvolvimento:
-Abaixo consta o registro da estrutura de código inicialmente sugerida pela Inteligência Artificial:
+- **O que a IA gerou:** A estrutura inicial do cenário (Scene, Camera, Renderer), a iluminação básica e o loop de renderização, além do laço de repetição (`for`) para posicionar matematicamente os 27 cubinhos no espaço.
+- **Onde a IA falhou (e a nossa intervenção):** O código original proposto pela IA não tratava o escopo de rotação de forma global. Ao tentar girar uma face, os cubinhos rotacionavam individualmente em seus próprios eixos centrais, desestruturando o cubo mágico. 
 
-![Captura de Tela do ChatGPT auxiliando no código do projeto](./Midia.jpg)
-
-*Nota: Para que a imagem apareça corretamente no GitHub, salve a foto que você me enviou com o nome exato de `Midia.jpg` dentro da mesma pasta do repositório onde está este arquivo README.*
+Para solucionar o bug do código gerado pela IA e cumprir os requisitos da especificação, realizamos a engenharia reversa do código e aplicamos os conceitos de hierarquia de nós estudados em aula: implementamos manualmente a lógica de agrupamento temporário com `THREE.Group` e a reancoragem de matrizes com `.attach()`, garantindo o funcionamento perfeito e consistente das rotações das faces Superior e Frontal.
 
 ---
 
