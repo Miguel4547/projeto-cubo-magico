@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Projeto Cubo Mágico 3D — UNICAP</title>
+  
+  <style>
+    /* --- SEU CÓDIGO CSS DO CODEPEN --- */
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #222;
+      font-family: Arial, sans-serif;
+    }
+
+    #hud {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, .7);
+      color: white;
+      padding: 12px;
+      border-radius: 10px;
+      z-index: 10;
+      text-align: center;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    }
+
+    .btn-roti {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 8px 14px;
+      margin: 4px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 13px;
+      transition: background 0.2s;
+    }
+
+    .btn-roti:hover {
+      background: #0056b3;
+    }
+  </style>
+</head>
+<body>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+  <div id="hud">
+    <strong>Cubo Mágico 3D (UNICAP)</strong><br>
+    <div style="margin: 8px 0;">
+      <button class="btn-roti" id="btnU">Face Superior (U)</button>
+      <button class="btn-roti" id="btnF">Face Frontal (F)</button>
+    </div>
+    <small style="color: #aaa; display:block;">Use os botões acima ou as teclas <strong>U</strong> e <strong>F</strong></small>
+    <small style="color: #66e0ff; display:block;">Arraste o fundo com o mouse para girar a câmera</small>
+  </div>
+
+  <script>
+    /* --- SEU CÓDIGO JAVASCRIPT DO CODEPEN --- */
+    
+    // 1. CONFIGURAÇÃO DA CENA, CÂMERA E RENDERIZADOR
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x222222);
+
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(5, 5, 7); // Posição angular ideal para ver o cubo em 3D
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // 2. CONTROLES DA CÂMERA (OrbitControls - Requisito obrigatório do professor)
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true; 
+
+    // Iluminação para destacar as cores das faces
+    const luzAmbiente = new THREE.AmbientLight(0xffffff, 0.8);
+    scene.add(luzAmbiente);
+    const luzDirecional = new THREE.DirectionalLight(0xffffff, 0.4);
+    luzDirecional.position.set(5, 10, 7);
+    scene.add(luzDirecional);
+
+    // 3. CORES OFICIAIS DO CUBO MÁGICO
+    const cores = [
+      0xb71212, // Direita (X+): Vermelho
+      0x0046ad, // Esquerda (X-): Azul
+      0xffffff, // Cima (Y+): Branco
+      0xffd500, // Baixo (Y-): Amarelo
+      0x009b48, // Frente (Z+): Verde
+      0xff5800  // Trás (Z-): Laranja
+    ];
+    const materiaisCubo = cores.map(cor => new THREE.MeshStandardMaterial({ color: cor }));
+
+    // 4. CRIANDO OS 27 CUBINHOS (Grid 3x3x3)
+    const cubinhos = [];
+    for (let x = -1; x <= 1; x++) {
+      for (let y = -1; y <= 1; y++) {
+        for (let z = -1; z <= 1; z++) {
+          const geometria = new THREE.BoxGeometry(0.95, 0.95, 0.95);
+          const cubo = new THREE.Mesh(geometria, materiaisCubo);
+          cubo.position.set(x, y, z);
+          scene.add(cubo);
+          cubinhos.push(cubo);
+        }
+      }
+    }
+
+    // 5. LÓGICA DE ROTAÇÃO DAS FACES USANDO THREE.GROUP (Dica do slide do Pedro)
+    let animando = false;
+
+    function girarFace(eixo, valor) {
+      if (animando) return;
+      animando = true;
+
+      const grupoFace = new THREE.Group();
+      scene.add(grupoFace);
+
+      // Filtra os cubinhos pertencentes à face no espaço global usando getWorldPosition
+      const faceSelecionada = cubinhos.filter(c => {
+        const posicaoGlobal = new THREE.Vector3();
+        c.getWorldPosition(posicaoGlobal);
+        return Math.round(posicaoGlobal[eixo]) === valor;
+      });
+
+      // Agrupa temporariamente mantendo a posição global estável
+      faceSelecionada.forEach(c => grupoFace.attach(c));
+
+      let anguloAlvo = Math.PI / 2; // 90 graus em radianos
+      let anguloAtual = 0;
+      const velocidad = 0.05;
+
+      function animar() {
+        if (anguloAtual < anguloAlvo) {
+          grupoFace.rotation[eixo] += velocidad;
+          anguloAtual += velocidad;
+          requestAnimationFrame(animar);
+        } else {
+          grupoFace.rotation[eixo] = anguloAlvo;
+
+          // Desagrupa atualizando a nova posição e rotação dos cubinhos no mundo global
+          const copiaFilhos = [...grupoFace.children];
+          copiaFilhos.forEach(c => scene.attach(c));
+
+          scene.remove(grupoFace);
+          animando = false;
+        }
+      }
+      animar();
+    }
+
+    // 6. DETECÇÃO DE CLIQUES NOS BOTÕES DO HUD
+    document.getElementById("btnU").addEventListener("click", () => girarFace("y", 1));
+    document.getElementById("btnF").addEventListener("click", () => girarFace("z", 1));
+
+    // 7. DETECÇÃO DE TECLADO (U e F)
+    window.addEventListener("keydown", e => {
+      if (animando) return;
+      if (e.key === "u" || e.key === "U") girarFace("y", 1);
+      if (e.key === "f" || e.key === "F") girarFace("z", 1);
+    });
+
+    // 8. RESPONSIVIDADE DO CANVAS AO REDIMENSIONAR A TELA
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // 9. LOOP DE EXECUÇÃO CONSTANTE
+    function loop() {
+      requestAnimationFrame(loop);
+      controls.update(); // Atualiza os movimentos do OrbitControls
+      renderer.render(scene, camera);
+    }
+    loop();
+  </script>
+</body>
+</html>
